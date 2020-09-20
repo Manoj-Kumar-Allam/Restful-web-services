@@ -1,0 +1,362 @@
+Web Service -:
+1. Designed for Machine-to-Machine or application-to-application interaction
+2. Should be interoperable -> Not platform dependent
+3. Should allow communication over a network
+
+The data exchanges takes place by using request-response model, we can communicate with the web application. In this way we can achieve platform independent nature.
+The request-response model can be XML format or JSON(Javascript Object Notation) format
+
+The Application A knows the format of Application B format of Request and Response -:
+
+Every Web service defines Service Definition. it is the contract between service provide and service consumer
+
+Service Definition describes 1. Request/Response Format is it XML or JSON format
+							 2. Request Structure -> The format and structure of the request
+							 3. Response Structure -> The format and structure of the response returnd by the service
+							 4. End Point -> where is the service available
+
+Transport -> 1.HTTP over the web(URL)
+			 2.MQ -> Here the service provider will not communicate directly with the Service Consumer. SC will put the request in the queue and SP will be listening to the queue. whenever request comes SP will process it and put response in the queue, which is later consumed by SC
+
+There are 2 types of webservices 1. SOAP (Poses Restriction on the format of XML request and response)
+								 2. Rest (Architectural Approach)
+
+SOAP and Rest are not really comparable
+
+SOAP -> Simple Object Access Protocol
+********************************************
+
+1. Here we use XML as the exchange format
+
+SOAP Defines specific structure -> 
+1. SOAP Envelope
+	1.1 SOAP Header -> it Contains the metadata like authorization, authentication, signature e.t.c,
+	1.2 SOAP Body -> Real content of request or response
+
+Ex -: 
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="">
+	<SOAP-ENV:Header/>
+	<SOAP-ENV:Body>
+		//request or response
+	</SOAP-ENV:Body>
+<SOAP-ENV:Envelope>
+
+-> SOAP supports both MQ and HTTP transport
+
+Service definition done by using Web service Definition Language(WSDL) -> 1. It defines the end point 
+																		  2. All operation allowed
+																		  3. Request Structure
+																		  4. Response Structure
+
+REST -> Representational State Transfer developed by Roy Fielding who developed HTTP
+********
+
+In REST the request and response protocol are in the format of HTTP. It defines the headers and body of the request
+
+-> In addition to the HTTP requests and response, it also defines the HTTP Methods to indicate what action are we performing and HTTP Status Codes to indicate the status of response.
+
+Restful Web services try to define the services using different concepts that already present in HTTP.
+
+Key Terms -:
+
+1. Resource -> it is anything that we would want to expose it to the outside world through our application.
+
+A resource has an URI(Uniform Resource Identifier)
+ex -:
+	1. /user/ranga -> lists user profile
+	2. /user/Ranga/todos -> Lists Ranga resources
+
+Here the resource can have different representations. it could be HTML, XML or JSON
+
+Example of resources -:
+	1. if we want to create a user -> POST/users
+	2. if we want to delete a user -> DELETE/users/1
+	3. if we want to get the users -> GET/users
+	4. if we want to get the one user -> GET/users/1
+
+In nutshell ->
+	Data Exchange Format -: No Restictions, JSON is popular.
+	Transport -> only HTTP
+	Service Definition -: No standard. WADL/Swagger e.t.c.,
+
+SOAP vs REST
+***************
+Restrictions vs Architectural Approach
+Data Exchange format (XML vs No standard)
+Service Definition (WSDL vs No standard WSDL, Swagger)
+Transport(HTTP OR Queue vs HTTP only)
+Restful service are more easier to implement than SOAP
+										
+In SOAP there are lot of complication in parsing the XMLs
+
+If there are no getters for the private field, we will get some exception on the web page if it needs to travlled across the network.
+
+1.  The dispacther servlet will get automatically loaded because of Spring MVC.
+-> @SpringBootApplication will have @EnableAutoConfiguration, which will load the classes by looking the names at class path.
+-> If we have Spring starter web, then it has an internal dependency on spring web mvc, it will load the Dispatcher Servlet.
+
+2. And we see some error messages on the web page, the related classes for such mechanism are also get loaded as part @EnableAutoConfiguration ex:- WhitelabelErrorViewConfiguration
+
+3. Spring Boot also have HttpMessageConverters, it will convert the bean into JSON.
+-> Internally Spring uses Jackson to Object Mapper, which will convert JSON to Beans and Beans to JSON
+
+4. Dispacther Servlet is Request Handler, it is implemented by following the FrontController Mapping.
+
+-> If we annotate any class with @RestController, we are having @ResponseBody, it will allows that the response from that controller would be mapped by a message converter into some other format
+
+Postman is a rest client.
+
+if we @RequestBody then automatic conversion will be happen internally by jackson and prepares the respective bean
+      ***************
+	  
+By using ResponseEntity, it is an extension of HTTP Entity, we can set the customized HTTP status codes.
+ ****************************
+ 
+		URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(user.getId()).toUri();
+		return ResponseEntity.created(uri).build();
+	
+	In the above lines of code we are saying resource has been created we are giving the location of the resource by using uri variable.
+	
+--> We can change the Response Status codes whenever something goes wrong by using ResponseStatus
+ex-: if user not found, we will throw customized exception and we annotate the class with @ResponseStatus(HttpStatus.NOT_FOUND)
+
+--> Under the covers Spring Boot and Spring MVC will have their exception mechanisms and they will process the thrown messages from the controller and give appropriate message as a response.
+
+
+ResponseEntityExceptionHandler serves a centrailized exception handler for all the exception handler classes
+
+The class which is annotated with @ControllerAdvice will share the methods across all the controllers
+
+Ex -:
+
+@ExceptionHandler(UserNotFoundException.class)
+	public final ResponseEntity<Object> handleUserNotFoundExceptionException(Exception ex, WebRequest request) throws Exception {
+		ExceptionResponse exceptionResponse = new ExceptionResponse(new Date(), ex.getMessage(), request.getDescription(false));
+		return new ResponseEntity<>(exceptionResponse, HttpStatus.NOT_FOUND);
+	}
+	
+	
+We can have the user input validations by using Java validation-api jar which is included spring validation starter API
+we can annotation at the properties like below
+@Size(min=2, message="Name should have atleast 2 characters")
+	@NotBlank(message="Name can not be blank")
+	private String name;
+
+when we annotate the method parameter with @Valid the validation API will validate the input before binding it to the actual object
+
+we can customize the validation exception by overriding handleMethodArgumentNotValid of ResponseEntityExceptionHandler
+@Override
+	protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+			HttpHeaders headers, HttpStatus status, WebRequest request) {
+		ExceptionResponse exceptionResponse = new ExceptionResponse(new Date(), ex.getMessage(),
+				ex.getBindingResult().toString());
+		return new ResponseEntity<>(exceptionResponse, HttpStatus.BAD_REQUEST);
+	}
+	
+HATEOAS -> Hyper Media as the Engine of Application State
+**********************************************************
+The concept is, whenever user request some resource, we will attach additional resources which might be useful for the user along with the requested resource
+
+Sample Code -: 
+        EntityModel<User> resource = EntityModel.of(user);
+		
+		WebMvcLinkBuilder linkTo = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).retrieveAllUsers());
+		
+		resource.add(linkTo.withRel("all-users"));
+		
+		return resource;
+
+Internalization -:
+********************
+
+We can customize the content shown on web page according to the Locale
+
+we can set the messages in message or message_CounttryCode and the ResourceBundleMessageSource will read them based on the locale
+
+spring.messages.basename=messages
+return this.messageSource.getMessage("good.morning.message", null, LocaleContextHolder.getLocale());
+
+Content Negotiation -:
+**************************
+By Default the *Accept* header and Content-Type is JSON.
+If we want XML type conversion going on we need to place jar in the POM.xml
+<!-- For XML data type instead JSON -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.dataformat</groupId>
+			<artifactId>jackson-dataformat-xml</artifactId>
+		</dependency>
+
+This will accpet request in XML and response in XML
+
+SWAGGER -:
+************
+Swagger is the documentation format for the restful services, it will help to define contract with the consumer about the restful webservices.
+
+To use this we need to configure below things
+
+Dependency -:
+***************
+	<dependency>
+			<groupId>io.springfox</groupId>
+			<artifactId>springfox-boot-starter</artifactId>
+			<version>3.0.0</version>
+		</dependency>
+
+1. Create class and annotate it with @EnableSwagger2 and @Configuration
+2. Create a bean of Docket type 
+	
+	@Bean
+	public Docket api() {
+		return new Docket(DocumentationType.SWAGGER_2);
+	}
+		
+Urls to show Documentation -: 1. http://localhost:8080/v2/api-docs
+							  2. http://localhost:8080/swagger-ui/
+							  3. http://localhost:8080/swagger-ui/index.html
+							  
+
+1. with v2/api-docs -> we will have a JSON Response as below
+
+-> Swagger : Version of Swagger
+-> info : description about the APIs we are offering -> we can provide customized information by using apiInfo(DEFAULT_API_INFO)
+-> host : the base url of the application hosted on a machine
+-> basepath : /
+-> tag : to group resources
+-> paths : will have the details of all the resources what we are offering and operations can be perfomred on those resources
+-> definitions : the description includes different elements used in the resource
+
+***Enhancing the Swagger API********
+************************************
+return new Docket(DocumentationType.SWAGGER_2).apiInfo(DEFAULT_API_INFO).produces(DEFAULT_PRODUCERS_AND_CONSUMERS).consumes(DEFAULT_PRODUCERS_AND_CONSUMERS);
+
+we can show custom description for all the models in definitions by using @ApiModel and @ApiModelProperty
+
+Monitoring the Resources-:
+*****************************
+We can Monitor the resources by using spring actuators to know status of services whether they are down or up.
+
+HAL -> Hypertext Application language-> it specifies how to hyperlink between resources in your API.
+Spring boot actuators exposes the apis in hal format.
+by using Hal dependency we can display them on the browser
+
+Evrything related to application can be checked by using actuators.
+
+	    <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-rest-hal-browser</artifactId>
+		</dependency>
+
+we need to set this property in application.prop file
+
+management.endpoints.web.exposure.include=*
+
+Filtering -:
+**************
+
+1. when you want filter out some of the information from bean like password in the user bean the filtering concept comes handy.
+
+we can ignore that field by annotating it with @JsonIgnore or else you can annotate as below on class
+@JsonIgnoreProperties(value= {"field1"})
+
+@JsonIgnoreis prefered over class level annotation because we are annotating the fields over there
+
+But it is a static filtering because the field is fixed here
+			****************
+
+Dynamic Filter -:
+******************
+By using MappingJacksonValue in any of the controller method we can filter out the values
+
+@GetMapping("/filtering/dynamic")
+	public MappingJacksonValue retriveOtherBean() {
+		OtherBean otherBean = new OtherBean("Value1", "Value2", "Value3");
+		
+		MappingJacksonValue mapping = new MappingJacksonValue(otherBean);
+
+		SimpleBeanPropertyFilter filter = SimpleBeanPropertyFilter.filterOutAllExcept("field2");
+
+		FilterProvider filters = new SimpleFilterProvider().addFilter("OtherBeanFilter", filter);
+
+		mapping.setFilters(filters);
+		
+		return mapping;
+	}
+	
+And we need to annotate the respective bean with @JsonFilter(value="OtherBeanFilter") what we have in filter provider.
+
+Versoning Restful Services -:
+***************************
+Factors needs to be considered -:
+**********************************
+1. MediaType Versioning (Git Hub)
+2. Headers Versioning (Microsoft)
+3. URI Versioning (Twitter)
+4. Request Parameter Versioning (Amazon)
+
+
+1.URI Pollution -> URI Versioning, Request Parameter Versioning
+
+2.Misuse of HTTP hEADERS -> MediaType Versioning, Headers Versioning
+
+3.Caching -> MediaType Versioning, Headers Versioning -> We can not cache request, it becomes difficult
+
+4.Can we execute the request on the browser -> MediaType Versioning, Headers Versioning -> needs some knowledge to send the request.
+
+5. API Documentation ->  with URI Versioning, Request Parameter Versioning it is easy
+
+*****************************Basic Authentication****************************
+1. Add spring-boot-starter-security
+
+Whenever application run Spring security will generate some random password to access the application. We need to have those credentials to access the application means we need to send them along with request.
+
+default user name is  user
+
+if we want static password we can configure them in application.prop file
+
+spring.security.user.name=
+spring.security.user.password=
+
+
+we can set static name for h2-database by adding prop in application.prop
+spring.datasource.url=jdbc:h2:mem:testdb
+
+spring.data.jpa.repositories.bootstrap-mode=default -> to improve the startup-time.
+
+can deffered and lazy(usefule in test scenarios)
+
+spring.jpa.show-sql=true
+spring.h2.console.enabled=true -> to show the console on browswer
+
+
+Richardson Model -:
+****************************
+
+1. Level-0 -> Expose SOAP Web Services in Rest Style
+2. Level-1 -> Expose Resources with proper URI (like putting the id in the url when we request for one)
+3. Level-2 -> Level - 1 + Proper use of HTTP Methods
+4. Level-3 -> Level 2 + HATEOAS (Data + Next Possible Actions)
+
+Best Practices of Restful Service Design
+*****************************************
+1. Consumer First -> Have a clear idea about who your consumers are like whether they access it by using web or mobile.
+					 Have proper names for the resources and proper documentation
+
+2. Make Best Use of HTTP -: Use the right request methods
+
+3. Response Status -> Ensure you give response with proper and appropriate response code.
+
+4. No secure Info in URI -> Make sure you don't send secure info in the URI
+
+5. Use plurals -> prefer /users/ to /user, /users/1 instead /user/1
+
+6. Use Nouns For the Resources if possible.
+
+
+
+
+
+
